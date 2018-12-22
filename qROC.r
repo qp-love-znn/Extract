@@ -50,6 +50,20 @@ tree <- read.tree(args[2])
 plot(tree,type = "unrooted",cex=0.2,edge.lty=1)
 plot(tree,type = "unrooted",tip.color = color_new2)
 ?plot.phylo
+cat("(((Strix_aluco:4.2,Asio_otus:4.2):3.1,",
+   "Athene_noctua:7.3):6.3,Tyto_alba:13.5);",
+   file = "ex.tre", sep = "\n")
+tree.owls <- read.tree("ex.tre")
+samples_name=tree.owls$tip.label
+groups_name=c("a","a","b","b")
+s_g=data.frame(samples_name,groups_name)
+group_color_number=hsv(runif(length(unique(s_g$groups_name)),0.65,0.95),1,1,0.7)
+names(group_color_number)=unique(s_g$groups_name)
+s_g$sample_clor=group_color_number[s_g$groups_name]
+color_new<-s_g$sample_clor
+names(color_new)<-s_g$samples_name
+color_new2<-color_new[tree$tip.label]
+plot(tree.owls,type = "fan",tip.color = color_new2,)
 ##ggtree
 tree_text="(((((cow,(whale,dolphin)),(pig2,boar)),camel),fish),seedling);"
 x=read.tree(text=tree_text)
