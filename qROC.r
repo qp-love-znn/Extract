@@ -50,3 +50,9 @@ tree <- read.tree(args[2])
 plot(tree,type = "unrooted",cex=0.2,edge.lty=1)
 plot(tree,type = "unrooted",tip.color = color_new2)
 ?plot.phylo
+##ggtree
+tree_text="(((((cow,(whale,dolphin)),(pig2,boar)),camel),fish),seedling);"
+x=read.tree(text=tree_text)
+cls<-list(a=c("cow","whale"),b=c("pig2","dolphin","boar"),c=c("camel","fish","seedling"))
+tree <- groupOTU(x, cls)
+ggtree(tree, aes(color=group, linetype=group)) + geom_tiplab()+theme(legend.position="right")
