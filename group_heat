@@ -9,6 +9,15 @@ if(length(args) == 2){
 	rownames(mat)=rownames(aa)
 	library(pheatmap)
 	pheatmap(mat,filename = paste(args[2],".pdf",sep = ""),color = colorRampPalette(c("blue","white","red"))(100),scale = "row",cluster_rows = T,cluster_cols = F,fontsize_row=4)
+	bb=pheatmap(mat,color = colorRampPalette(c("blue","white","red"))(100),scale = "row",cluster_rows = T,cluster_cols = F,fontsize_row=4)
+	outfile= paste(args[2], ".pheatmap_reorder.xls", sep = "")
+	order_row = 1:nrow(aa)
+	order_col = 1:ncol(aa)
+	order_row = bb$tree_row$order
+	datat = data.frame(aa[order_row,order_col])
+	datat = data.frame(rownames(datat),datat,check.names =F)
+	colnames(datat)[1] = "id"
+	write.table(datat,file=outfile,row.names=FALSE,quote = FALSE,sep='\t')
 } else if(length(args) == 3){
 	shuju=read.table(args[1],header = T,sep="\t",row.names = 1,check.names = F,quote = "",comment.char = "")
 	aa <- shuju[apply(shuju,1,sd) != 0, ]
@@ -17,6 +26,15 @@ if(length(args) == 2){
 	rownames(annot)=g$V2
 	library(pheatmap)
 	pheatmap(aa,filename = paste(args[3],".pdf",sep = ""),color = colorRampPalette(c("blue","white","red"))(100),annotation_col = annot,show_rownames = T,fontsize_row=4,scale = "row",cluster_cols = F,show_colnames = T,main = "Significant Differential Gene Heatmap")
+	bb=pheatmap(aa,color = colorRampPalette(c("blue","white","red"))(100),annotation_col = annot,show_rownames = T,fontsize_row=4,scale = "row",cluster_cols = F,show_colnames = T,main = "Significant Differential Gene Heatmap")
+#	outfile= paste(args[3], ".pheatmap_reorder.xls", sep = "")
+#	order_row = 1:nrow(aa)
+#	order_col = 1:ncol(aa)
+#	order_row = bb$tree_row$order
+#	datat = data.frame(aa[order_row,order_col])
+#	datat = data.frame(rownames(datat),datat,check.names =F)
+#	colnames(datat)[1] = "id"
+#	write.table(datat,file=outfile,row.names=FALSE,quote = FALSE,sep='\t')
 } else {
 	cat("Rscript heatmap_easy.R <file> <output_prefix>\n") ##two args
 	cat("Rscript heatmap_easy.R <file> <group> <output_prefix>\n") ##three args
