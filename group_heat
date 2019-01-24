@@ -1,0 +1,62 @@
+#!/usr/bin/Rscript
+
+
+args <- commandArgs(trailingOnly=T)
+if(length(args) == 2){
+	shuju=read.table(args[1],header = T,sep="\t",row.names = 1,check.names = F,quote = "",comment.char = "")
+	aa <- shuju[apply(shuju,1,sd) != 0, ]
+	mat=data.frame(aa[,1:4])
+	rownames(mat)=rownames(aa)
+	library(pheatmap)
+	pheatmap(mat,filename = paste(args[2],".pdf",sep = ""),color = colorRampPalette(c("blue","white","red"))(100),scale = "row",cluster_rows = T,cluster_cols = F,fontsize_row=4)
+} else if(length(args) == 3){
+	shuju=read.table(args[1],header = T,sep="\t",row.names = 1,check.names = F,quote = "",comment.char = "")
+	aa <- shuju[apply(shuju,1,sd) != 0, ]
+	g=read.table(args[2],header = F,sep="\t",quote = "",comment.char = "",check.names = F,)
+	annot=data.frame(Group=g$V1)
+	rownames(annot)=g$V2
+	library(pheatmap)
+	pheatmap(aa,filename = paste(args[3],".pdf",sep = ""),color = colorRampPalette(c("blue","white","red"))(100),annotation_col = annot,show_rownames = T,fontsize_row=4,scale = "row",cluster_cols = F,show_colnames = T,main = "Significant Differential Gene Heatmap")
+} else {
+	cat("Rscript heatmap_easy.R <file> <output_prefix>\n") ##two args
+	cat("Rscript heatmap_easy.R <file> <group> <output_prefix>\n") ##three args
+	q()
+}
+
+
+
+args<-commandArgs(T)
+data <- read.table(args[1],header = T,sep="\t",check.names=FALSE)
+
+split<-args[2]               #### split  means fisrt treatment last expression's column number
+control<-data[,1:split]
+split1=as.numeric(split)+1   #### split1 means second treatment first expression's column number
+case<-cbind(data[,1],data[,split1:ncol(data)])
+
+Pvalue<-c(rep(0,nrow(data)))
+control_mean<-c(rep(0,nrow(data)))
+case_mean<-c(rep(0,nrow(data)))
+log2_FC<-c(rep(0,nrow(data)))
+for(i in 1:nrow(data))
+{
+#	print(case[i,2:ncol(case)])
+	if( (is.na(var(as.numeric(control[i,2:ncol(control)]))) && is.na(var(as.numeric(case[i,2:ncol(case)])))) || (var(as.numeric(control[i,2:ncol(control)]))==var(as.numeric(case[i,2:ncol(case)]))) )
+	{
+		Pvalue[i]<-1
+	}
+	else
+	{
+		y<-t.test(log2(as.numeric(control[i,2:ncol(control)])),log2(as.numeric(case[i,2:ncol(case)])),alternative="two.sided")
+		Pvalue[i]<-y$p.value
+	}
+	control_mean[i]<-mean(as.numeric(control[i,2:ncol(control)]))
+	case_mean[i]<-mean(as.numeric(case[i,2:ncol(case)]))
+	log2_FC[i]<-log2(case_mean[i]/control_mean[i])
+}
+#fdr<-p.adjust(Pvalue,method="fdr",length(Pvalue))
+out<-cbind(data,control_mean,case_mean,log2_FC,Pvalue)
+FC="log2_FC(case_mean/control_mean)"
+title=colnames(out)
+title[ncol(data)+3]=FC
+colnames(out)=title
+write.table(out,file=paste(args[1],"paired_Ttest.xls",sep="."),quote=FALSE,row.names=FALSE,sep="\t")
