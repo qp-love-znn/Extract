@@ -1,0 +1,218 @@
+根据stem的软件跑出来结果：
+/Bio/usr/bin/java -mx1024M -jar ./util/stem.jar -d trend outdir
+##trend##
+Data_File	rpkm.xls
+Clustering_Method[STEM Clustering Method,K-means]	STEM Clustering Method
+Maximum_Number_of_Model_Profiles	8
+Maximum_Unit_Change_in_Model_Profiles_between_Time_Points	1
+Number_of_Clusters_K	10
+Number_of_Random_Starts	20
+Normalize_Data[Log normalize data,Normalize data,No normalization/add 0]	Log normalize data
+Spot_IDs_included_in_the_data_file	false
+
+#Repeat data
+Repeat_Data_is_from[Different time periods,The same time period]	Different time periods
+
+#Comparison Data:
+Comparison_Minimum_Number_of_genes_in_intersection	5
+Comparison_Maximum_Uncorrected_Intersection_pvalue	0.0050
+
+#Filtering:
+Maximum_Number_of_Missing_Values	0
+Minimum_Correlation_between_Repeats	0.0
+Minimum_Absolute_Log_Ratio_Expression	1
+Change_should_be_based_on[Maximum-Minimum,Difference From 0]	Maximum-Minimum
+Pre-filtered_Gene_File	
+
+#Model Profiles
+Maximum_Correlation	1.0
+Number_of_Permutations_per_Gene	50
+Maximum_Number_of_Candidate_Model_Profiles	1000000
+Significance_Level	0.05
+Correction_Method[Bonferroni,False Discovery Rate,None]	Bonferroni
+Permutation_Test_Should_Permute_Time_Point_0	true
+
+#Clustering Profiles:
+Clustering_Minimum_Correlation	0.7
+Clustering_Minimum_Correlation_Percentile	0.0
+
+#Gene Annotations:
+Category_ID_File	
+Include_Biological_Process	false
+Include_Molecular_Function	false
+Include_Cellular_Process	false
+Only_include_annotations_with_these_evidence_codes	
+Only_include_annotations_with_these_taxon_IDs	
+
+#GO Analysis:
+Multiple_hypothesis_correction_method_enrichment[Bonferroni,Randomization]	Randomization
+Minimum_GO_level	3
+GO_Minimum_number_of_genes	5
+Number_of_samples_for_randomized_multiple_hypothesis_correction	500
+
+#Interface Options
+Gene_display_policy_on_main_interface[Do not display,Display only selected,Display all]	Do not display
+Gene_Color(R,G,B)	204,51,0
+Display_Model_Profile	false
+Display_Profile_ID	false
+Display_details_when_ordering	false
+Show_Main_Y-axis_gene_tick_marks	false
+Main_Y-axis_gene_tick_interval	1.0
+Y-axis_scale_for_genes_on_main_interface_should_be[Gene specific,Profile specific,Global]	Profile specific
+Scale_should_be_based_on_only_selected_genes	false
+Y-axis_scale_on_details_windows_should_be[Determined automatically,Fixed]	Determined automatically
+Y_Scale_Min	-3.0
+Y_Scale_Max	3.0
+Tick_interval	1.0
+X-axis_scale_should_be[Uniform,Based on real time]	Uniform
+
+后得到文件Trend_genetable.txt和Trend_profiletable.txt
+然后将Trend_genetable.txt文件整理为profile0，profile1...格式放在一个文件夹/home/qipeng/profile中
+然后将Trend_profiletable.txt去掉表头为pro_trend.txt，放在文件夹/home/qipeng/pro_trend中
+然后运行Rscript grap.r /home/qipeng/profile /home/qipeng/pro_trend/pro_trend.txt得到图
+##/home/qipeng/profile:profile0,profile1,profile2.....
+##profile0##
+profile value sample
+0	0.00	sample1
+0	-0.73	sample2
+
+##grap.r##
+args <- commandArgs(trailingOnly=T)
+if(length(args)!=2){
+	cat("Rscript heatmap_easy.R <profile dir> <Trend_profiletable.txt>\n")
+	q()
+}
+library(ggplot2)
+fs = list.files(args[1])
+print(fs)
+#q()
+#fs <- fs[fs != "/home/qipeng/bio/trend/aa.r"]
+fs <- fs[fs != "aa.r"]
+fs <- fs[fs != "pp"]
+#print(fs)
+#q()
+n = length(fs)
+for(i in 1:n){
+	m <- read.table(fs[i], header=T, sep="\t",na.strings = "NAAaAAAAA")
+#	m$xl <- factor(m$xl, levels = c("Da10-1","Da10-2","Da10-3","Da10-4","Da10-5"))
+	head <- read.table(args[2],header=F,sep="\t",na.strings = "NAAaAAAAA")
+	a=colors()
+	a=a[a!="white"]
+	palette(a)
+	ii=i-1
+	kk=fs[i]
+	kk1=sub("profile","",kk)
+	print(kk1)
+#	q()
+	kk2=as.numeric(kk1)+1
+	hh=6/2
+	length=8
+	print(head[kk2,5])
+#	q()
+	ee <- sprintf("%.1f",as.numeric(as.character(head[kk2,5])))
+	cc=paste("profile","#",kk1,":(",head[kk2,2],")")
+	print(cc)
+#	q()
+	if (head[kk2,6]>0.05)
+	dd=paste(head[kk2,4],"Genes Assigned;",ee,"Genes Expected;","p-value=",head[kk2,6],"(not significant)")
+	else
+	dd=paste(head[kk2,4],"Genes Assigned;",ee,"Genes Expected;","p-value=",head[kk2,6],"(significant)")
+	y_max = max(abs(m$value))+max(abs(m$value))/5
+	if (length>=17){
+	ggplot(m, aes(x = xl, y= value, group = sample, color = sample )) + geom_line() +ggtitle(fs[i])+
+	geom_text(aes(hh, y_max, label =cc),color="black",fontface=1,size=4)+
+	geom_text(aes(hh, y_max-max(abs(m$value))/10, label = dd),color="black",fontface=1,size=4)+
+	scale_color_gradientn(colours=palette())+ labs(x="", y="") + theme_bw() + theme(legend.position = "none",axis.text.x=element_text(angle=45,vjust=0.85,hjust=0.9)) + ylim(-y_max, y_max) + labs(y="log2(V(i)/V(0))") + scale_x_discrete(expand=c(0.05, 0))}
+	else{
+        ggplot(m, aes(x = xl, y= value, group = sample, color = sample )) + geom_line() +ggtitle(fs[i])+
+        geom_text(aes(hh, y_max, label =cc),color="black",fontface=1,size=4)+
+        geom_text(aes(hh, y_max-max(abs(m$value))/10, label = dd),color="black",fontface=1,size=4)+
+        scale_color_gradientn(colours=palette())+ labs(x="", y="") + theme_bw() + theme(legend.position = "none") + ylim(-y_max, y_max) + labs(y="log2(V(i)/V(0))") + scale_x_discrete(expand=c(0.05, 0))}
+        ggsave(paste(fs[i], ".png", sep=""), width = 8, dpi = 300)
+		ggsave(paste(fs[i], ".pdf", sep=""))
+}
+
+然后运行Rscript trend_analysis.r /home/qipeng/pro_trend/pro_trend.txt画图
+args <- commandArgs(trailingOnly=T)
+if(length(args)!=1){
+	cat("Rscript heatmap_easy.R <pro_trend.txt>\n")
+	q()
+}
+m=read.table(args[1], sep = "	",na.strings = "NAAaAAAAA")
+profile_counts=nrow(m)
+rx=1
+while(rx*rx<=profile_counts)
+{
+	rx=rx+1
+}
+#print(rx)
+#q()
+
+row_counts=rx
+total_counts=0
+if(profile_counts%%row_counts==0)
+{
+	total_counts=profile_counts
+}
+if(profile_counts%%row_counts!=0)
+{
+	total_counts=(as.integer(profile_counts/row_counts)+1)*row_counts
+}
+if (total_counts<20)
+{
+	total_counts=20
+	row_counts=5
+}
+mat=t(matrix(1:total_counts,nrow=row_counts))
+#png(paste("trend_all_by_gene_number.png",sep="."), width = 800, height = 600, units = "px")
+pdf(paste("trend_all_by_gene_number.pdf",sep="."), width = 8, height = 6)
+layout(mat)
+#colors=c("lightgreen","lightblue","lightpink")
+#colors=c("#FF0000","#FF9900","#FFCB2F","#FF9999","#FFB38C","#CC0033","#993366","#996699","#FF99CC","#33CC33","#CCFFFF","#00FFFF","#993399","#CCCC66","#99CC00","#FFFF00","#99CCFF","#99CC33","#0000FF","#CCFFFF","#00FF00","#663300","#003366","#999999","#333333")
+colors=c("#FFD700","#FF8C00","#F08080","#FF0000","#E066FF","#1E90FF","#104E8B","#006400","#43CD80","#436EEE","#B3EE3A","#9BCD9B","#FFF68F","#FF34B3","#F4A460","#EEA2AD","#EED2EE","#CDB7B5","#87CEFA","#8DB6CD")
+palette(colors)
+ddd=1
+for(i in order(m[,4],decreasing=T))
+{
+	y=as.numeric(strsplit(as.character(m[i,2]),",")[[1]])
+	print(m[i,2])
+	print(y)
+	q()
+	x=1:length(y)
+	max_y=max(abs(y))*1.15
+	par(mar=c(2,2,2,2))
+	plot(x,y,type="n",xlim=c(min(x),max(x)),ylim=c(-max_y,max_y),xlab="",ylab="",xaxt="n",yaxt="n",main=paste("profile",as.character(m[i,1])," : ",as.numeric(m[i,4])," genes",sep=""),cex.main=7/row_counts,las=2)
+	if(m[i,6]<0.05)
+	{
+		rect(-max_y*2, -max_y*2, 100, 100, col=ddd)
+		ddd=ddd+1
+	}
+	points(x,y,type="l",lwd=7/row_counts*2.5)
+	box()
+}
+mat=t(matrix(1:total_counts,nrow=row_counts))
+#png(paste("trend_all_by_pvalue.png",sep="."), width = 800, height = 600, units = "px")
+pdf(paste("trend_all_by_pvalue.pdf",sep="."), width = 8, height = 6)
+layout(mat)
+#colors=c("lightgreen","lightblue","lightpink")
+#colors=c("#FF0000","#FF9900","#FFCB2F","#FF9999","#FFB38C","#CC0033","#993366","#996699","#FF99CC","#33CC33","#CCFFFF","#00FFFF","#993399","#CCCC66","#99CC00","#FFFF00","#99CCFF","#99CC33","#0000FF","#CCFFFF","#00FF00","#663300","#003366","#999999","#333333")
+colors=c("#FFD700","#FF8C00","#F08080","#FF0000","#E066FF","#1E90FF","#104E8B","#006400","#43CD80","#436EEE","#B3EE3A","#9BCD9B","#FFF68F","#FF34B3","#F4A460","#EEA2AD","#EED2EE","#CDB7B5","#87CEFA","#8DB6CD")
+palette(colors)
+ddd=1
+for(i in order(m[,6]))
+{
+	y=as.numeric(strsplit(as.character(m[i,2]),",")[[1]])
+	x=1:length(y)
+	max_y=max(abs(y))*1.15
+	par(mar=c(2,2,2,2))
+	plot(x,y,type="n",xlim=c(min(x),max(x)),ylim=c(-max_y,max_y),xlab="",ylab="",xaxt="n",yaxt="n",main=paste("profile",as.character(m[i,1])," : ",as.numeric(m[i,6])," P-value",sep=""),cex.main=7/row_counts,las=2)
+	if(m[i,6]<0.05)
+	{
+		rect(-max_y*2, -max_y*2, 100, 100, col=ddd)
+		ddd=ddd+1
+	}
+	points(x,y,type="l",lwd=7/row_counts*2.5)
+	box()
+}
+dev.off()
+
