@@ -1,0 +1,140 @@
+## ѨҪ°²װR°񬱠»𡓔ʏ°汾
+## try http:// if https:// URLs are not supported
+#source("https://bioconductor.org/biocLite.R")
+#biocLite("ropls")
+# µ¼ɫ˽¾
+args<-commandArgs(T)
+library(ropls)
+library(ggplot2)
+#input="sheep_expression.txt"
+#group="sheep_group.txt"
+#outplot="sheepplot.pdf"
+#pcapdf="sheep_pca.pdf"
+#outpc="sheeppc.txt"
+#vip="sheepvip.txt"
+input = args[1]
+group = args[2]
+output = args[3]
+scale = args[4]  ##c("none", "center", "pareto", "standard")[3]
+type = args[5]  ## PLS-DA OPLS-DA
+#islog2 = args[6] ## log2 data
+
+filter_flag = 0
+if(length(args) > 100){ ## no use here 
+    cols=as.numeric((unlist(strsplit(args[6],','))))
+    group_names=unlist(strsplit(args[7],','))
+    cutfc = log2(as.numeric(args[8]))
+    cutvip  = args[9]
+    filter_flag = 1
+}
+#    type = "PLS-DA"
+#    scale = c("none", "center", "pareto", "standard")[3]
+scale
+
+## output file 
+plsda_pdf =  paste(output,".plsda.pdf",sep="")
+plsda_pdf_nolabel =  paste(output,".plsda.nosampleid.pdf",sep="")
+oplsda_pdf =  paste(output,".oplsda.pdf",sep="")
+pcapdf = paste(output,".pca.pdf",sep="")
+pcapdf_nolabel = paste(output,".pca.nosampleid.pdf",sep="")
+outpc = paste(output,".pc.xls",sep="")
+
+vip = paste(output,".vip.xls",sep="")
+perm_pdf = paste(output,".permutation.pdf",sep="")
+load_plot = paste(output,".loading_plot.pdf",sep="")
+plsda_allpdf =  paste(output,".plsda.all.pdf",sep="")
+
+all = paste(output,".all.xls",sep="")
+filter = paste(output,".filter.xls",sep="")
+
+if(file.exists("Rplots.pdf")){
+    cat("Rplots.pdf is exist! rm it!!")
+    file.remove("Rplots.pdf")
+}
+
+expr=read.table(input,header=T,row.names=1,sep="\t",check.names=FALSE,quote="")
+expr0 = expr
+#expr=round(expr,6)
+sample_infor=read.table(group,header=F,sep="\t")
+colnames(sample_infor) = c("names","group")
+
+#˽¾ޕ
+#expr[expr==0] = 1
+#expr = log2(expr)
+expr=t(expr)
+
+## prepare gourp info
+expr2 = data.frame(expr[,1:2])
+expr2$names = rownames(expr2)
+expr2 = merge(expr2,sample_infor,by="names",sort=FALSE)
+head(expr2)
+gp=as.factor(as.character(expr2$group))
+gp
+
+## set crossvalI
+if(nrow(expr)>=7){
+    crossvalI=7
+}else{
+    crossvalI=nrow(expr)
+}
+
+permI = 200
+
+#opls(expr)
+#plsda ·׎򻎊䴶
+
+pre = 1
+tryCatch( 
+    {
+        plsda=opls(expr,gp,crossvalI=crossvalI,scaleC=scale,plotL = FALSE,permI=permI)
+        pre=plsda@summaryDF$pre 
+    },
+    error = function(e){cat(conditionMessage(e),"\n")}
+)
+
+#plsda=opls(expr,gp,crossvalI=crossvalI,scaleC=scale,plotL = FALSE,permI=permI)
+#pre = plsda@summaryDF$pre
+#if(type == "PLS-DA"){
+if(pre<2){  ## if predI == 1, use 2
+    plsda=opls(expr,gp,predI=2,crossvalI=crossvalI,scaleC=scale,plotL = FALSE,permI=permI)
+}
+plot(plsda, typeVc = "x-score",parAsColFcVn = gp, parEllipsesL = TRUE)
+#dev.off()
+file.rename("Rplots.pdf",plsda_pdf)
+plot(plsda, typeVc = "x-score",parAsColFcVn = gp, parEllipsesL = TRUE,parLabVc=rep(".",length(gp)),parCexN=3)
+file.rename("Rplots.pdf",plsda_pdf_nolabel)
+
+#}else{
+if(type == "OPLS-DA"){
+    pre = 1
+    tryCatch( 
+        {
+            plsda=opls(expr,gp,crossvalI=crossvalI,orthoI=NA,scaleC=scale,plotL = FALSE,permI=200)
+            pre=plsda@summaryDF$pre 
+        },
+        error = function(e){cat(conditionMessage(e),"\n")}
+    )
+    if(pre<2){
+        plsda <- opls(expr,gp,crossvalI=crossvalI,orthoI=1,scaleC=scale,plotL = FALSE,permI=permI)
+    }else{
+        plsda <- opls(expr,gp,crossvalI=crossvalI,orthoI=NA,scaleC=scale,plotL = FALSE,permI=permI)
+    }
+    plsda_pdf =  paste(output,".oplsda.pdf",sep="")
+    plot(plsda, typeVc = "x-score",parAsColFcVn = gp, parEllipsesL = TRUE)
+    file.rename("Rplots.pdf",plsda_pdf)
+    plsda_pdf =  paste(output,".oplsda.nosampleid.pdf",sep="")
+    plot(plsda, typeVc = "x-score",parAsColFcVn = gp, parEllipsesL = TRUE,parLabVc=rep(".",length(gp)),parCexN=3)
+    file.rename("Rplots.pdf",plsda_pdf)
+}
+#str(plsda)
+save(plsda,gp,crossvalI,scale,permI,file= paste(output,"-PlotAndOption.RData",sep=""))
+load(paste(output,"-PlotAndOption.RData",sep=""))
+write.table(plsda@suppLs$permMN,file = paste(args[3],'.RQ.txt', sep = ''),quote = FALSE, sep = "\t",row = F)
+mat <- read.table(paste(args[3],'.RQ.txt',sep=''), header = T,sep="\t",check.name=0,comment.char = "")
+pdf(file=paste(args[3],'.RQ.pdf',sep=''))
+plot(mat$sim,mat$`R2Y(cum)`,col="#458B00",ylim = c(-1,1),pch=16)
+lines(c(0.0,1.0),c(0.7,0.75),type = "l",lty=5)
+lines(mat$sim,mat$`Q2(cum)`,type = "p",col="#8B658B",pch=15)
+lines(c(0.2,1.0),c(-0.48,0.3),type = "l",lty=5)
+abline(h=0)
+dev.off()
