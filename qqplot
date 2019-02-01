@@ -1,0 +1,81 @@
+
+setwd("./gwas/result/kR")
+source("./qqplot_function.R")
+mydata <- read.table("./gwas/result/kR/aa.txt", header = T, stringsAsFactors = F, comment.char = "")
+##./gwas/result/kR/aa.txt##
+SNP	CHR	BP	P	R2
+rs1	scaffold2131	23618	0.09938359694829735	0.05637824577302343
+rs2	scaffold2131	26444	0.15624842501457709	0.0376312542024002
+rs3	scaffold2131	27601	0.6211705901579241	0.010290844315900625
+
+qqplot(
+    pvector = mydata[,4],
+    key = "flowering_type_based_on_CDHs",
+    col.point = "darkblue",
+    pointsize = 1,
+    col.line = "red",
+    linesize = 0.5,
+    cexLabel = 15,
+    cexTick = 15,
+    ci = F
+    )
+    
+qqplot <- function(pvector, key, col.point = "darkblue", col.line = "red", ci = T, pointsize = 1, linesize = 0.5, cexLabel = 18, cexTick = 18){
+  library(ggplot2)
+  library(scales)
+  #pvector <- T1$P_value
+  o <- -log10(sort(na.omit(pvector), decreasing=F))
+  e <- -log10(1:length(o)/length(o))
+  c975 <- rep(0,length(o))
+  c025 <- rep(0,length(o))
+  for(i in 1:length(o)){
+    c975[i] <- qbeta(0.975, i, length(o) - i + 1)
+    c025[i] <- qbeta(0.025, i, length(o) - i + 1)
+  }
+  x <- c(e, e[length(e):1])
+  y <- c(-log10(c025), -log10(c975[length(e):1]))
+  dfeo <- as.data.frame(cbind(e, o))
+  dfci <- as.data.frame(cbind(x, y))
+  my_theme1 <- theme(legend.position = "none",
+                     panel.grid.major = element_blank(),
+                     panel.grid.minor = element_blank(),
+                     panel.border = element_blank(),
+                     panel.background = element_blank(),
+                     axis.line.x = element_line(colour = "black", size = linesize),
+                     axis.line.y = element_line(colour = "black", size = linesize)
+  )
+  my_theme2 <- theme(axis.title.x = element_text(face = "bold", size = cexLabel, colour = "black"), 
+                     axis.title.y = element_text(face = "bold", size = cexLabel, colour = "black"), 
+                     axis.text.x = element_text(face = "bold", size = cexTick, colour = "black"), 
+                     axis.text.y = element_text(face = "bold", size = cexTick, colour = "black"))
+  dfci <- na.omit(dfci)
+  dfeo <- na.omit(dfeo)
+  qqp <- ggplot()
+  if(ci == T){
+    qqp <- qqp + geom_polygon(data = dfci, aes(x = x, y = y), alpha=0.2)
+  }
+  #x[is.finite(x)] 
+  dfeo <- dfeo[is.finite(rowSums(dfeo)),]
+  print(max(dfeo$o))
+  print(max(dfeo$e))
+  qqp <- qqp + geom_line(data = na.omit(dfeo), aes(x = e, y = e), colour = col.line, size = linesize)
+  qqp <- qqp + geom_point(data = na.omit(dfeo), aes(x = e, y = o), colour = col.point, size = pointsize)
+  qqp <- qqp + scale_y_continuous(expand = c(0,0), limits = c(0, max(dfeo$o)*1.05), breaks = pretty_breaks(5))
+  qqp <- qqp + scale_x_continuous(expand = c(0,0), limits = c(0, max(dfeo$e)*1.05), breaks = pretty_breaks(5))
+  qqp <- qqp + scale_color_manual(values = "red")
+  qqp <- qqp + xlab(expression(Expected~~-log[10](italic(p))))
+  qqp <- qqp + ylab(expression(Observed~~-log[10](italic(p))))
+  qqp <- qqp + theme_classic()
+  qqp <- qqp + my_theme1 + my_theme2
+  png(filename = paste0(key, ".qq.png"), width = 9, height = 9, units = "cm", res = 300)
+  print(qqp)
+  dev.off()
+  pdf(file = paste0(key, ".qq.pdf"), width = 9/2.54, height = 9/2.54)
+  print(qqp)
+  dev.off()
+  #return(qqp)
+#  svg(file = paste0(key, "_qq.svg"), width = 9/2.54, height = 9/2.54)
+#  print(qqp)
+#  dev.off()
+  #return(qqp)
+}
